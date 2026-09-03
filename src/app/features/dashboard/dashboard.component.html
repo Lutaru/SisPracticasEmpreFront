@@ -1,0 +1,122 @@
+<div class="space-y-6">
+  <!-- Bienvenida -->
+  <div class="bg-white rounded-2xl p-6 sm:p-8 border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div>
+      <h1 class="text-2xl sm:text-3xl font-bold text-slate-800 tracking-tight">
+        Bienvenido, {{ user()?.firstName }} {{ user()?.lastName }}
+      </h1>
+      <p class="mt-1 text-slate-500">
+        Panel de Control • Rol actual: <span class="font-semibold text-indigo-600">{{ user()?.role }}</span>
+      </p>
+    </div>
+    <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-50 border border-slate-200 text-xs font-medium text-slate-600">
+      <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+      Sistema Operativo y Conectado
+    </div>
+  </div>
+
+  <!-- Vista específica por Rol: ADMINISTRADOR -->
+  <div *ngIf="user()?.role === Role.ADMIN" class="space-y-6">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+      <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-semibold text-slate-400 uppercase">Usuarios Totales</span>
+          <span class="p-2.5 bg-indigo-50 text-indigo-600 rounded-xl">👥</span>
+        </div>
+        <p class="text-3xl font-bold text-slate-800 mt-4">5</p>
+        <span class="text-xs text-emerald-600 font-medium">Roles configurados</span>
+      </div>
+
+      <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-semibold text-slate-400 uppercase">Empresas Activas</span>
+          <span class="p-2.5 bg-emerald-50 text-emerald-600 rounded-xl">🏢</span>
+        </div>
+        <p class="text-3xl font-bold text-slate-800 mt-4">0</p>
+        <span class="text-xs text-slate-400">Listas para convenios</span>
+      </div>
+
+      <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-semibold text-slate-400 uppercase">Convenios Vigentes</span>
+          <span class="p-2.5 bg-blue-50 text-blue-600 rounded-xl">📜</span>
+        </div>
+        <p class="text-3xl font-bold text-slate-800 mt-4">0</p>
+        <span class="text-xs text-slate-400">Periodo actual</span>
+      </div>
+
+      <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-semibold text-slate-400 uppercase">Prácticas en Curso</span>
+          <span class="p-2.5 bg-amber-50 text-amber-600 rounded-xl">💼</span>
+        </div>
+        <p class="text-3xl font-bold text-slate-800 mt-4">0</p>
+        <span class="text-xs text-slate-400">Estudiantes asignados</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Vista específica por Rol: COORDINADOR -->
+  <div *ngIf="user()?.role === Role.COORDINATOR" class="space-y-6">
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-5">
+      <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+        <span class="text-xs font-semibold text-slate-400 uppercase">Postulaciones por Revisar</span>
+        <p class="text-3xl font-bold text-slate-800 mt-3">0</p>
+        <span class="text-xs text-amber-600 font-medium">Pendientes de verificación</span>
+      </div>
+      <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+        <span class="text-xs font-semibold text-slate-400 uppercase">Ofertas Publicadas</span>
+        <p class="text-3xl font-bold text-slate-800 mt-3">0</p>
+        <span class="text-xs text-blue-600 font-medium">Con vacantes disponibles</span>
+      </div>
+      <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+        <span class="text-xs font-semibold text-slate-400 uppercase">Evaluaciones Pendientes</span>
+        <p class="text-3xl font-bold text-slate-800 mt-3">0</p>
+        <span class="text-xs text-slate-400">Prácticas por calificar</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Vista específica por Rol: ESTUDIANTE -->
+  <div *ngIf="user()?.role === Role.STUDENT" class="space-y-6">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+        <h3 class="text-lg font-bold text-slate-800 mb-2">Mi Estado de Práctica</h3>
+        <p class="text-sm text-slate-500 mb-4">
+          Aún no tienes una práctica formal registrada para este periodo académico.
+        </p>
+        <div class="p-4 rounded-xl bg-indigo-50/60 border border-indigo-100 flex items-center justify-between">
+          <span class="text-sm font-semibold text-indigo-900">Estado Académico</span>
+          <span class="px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800">HABILITADO</span>
+        </div>
+      </div>
+
+      <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+        <h3 class="text-lg font-bold text-slate-800 mb-2">Mis Postulaciones</h3>
+        <p class="text-sm text-slate-500">
+          Revisa las convocatorias disponibles en el módulo de <span class="font-semibold text-indigo-600">Ofertas de Práctica</span> para postularte a las vacantes de tu interés.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Vista específica por Rol: EMPRESA -->
+  <div *ngIf="user()?.role === Role.COMPANY" class="space-y-6">
+    <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+      <h3 class="text-lg font-bold text-slate-800 mb-2">Panel Empresarial</h3>
+      <p class="text-sm text-slate-500">
+        Gestiona las vacantes ofertadas, revisa las hojas de vida de los estudiantes postulados y califica su desempeño laboral.
+      </p>
+    </div>
+  </div>
+
+  <!-- Vista específica por Rol: TUTOR -->
+  <div *ngIf="user()?.role === Role.TUTOR" class="space-y-6">
+    <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+      <h3 class="text-lg font-bold text-slate-800 mb-2">Seguimiento Académico de Practicantes</h3>
+      <p class="text-sm text-slate-500">
+        Supervisa las bitácoras, registra visitas a las empresas y diligencia los instrumentos evaluativos correspondientes.
+      </p>
+    </div>
+  </div>
+</div>

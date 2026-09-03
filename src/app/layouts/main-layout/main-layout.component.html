@@ -1,0 +1,145 @@
+<div class="min-h-screen bg-slate-100 flex flex-col">
+  <!-- Navbar superior -->
+  <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
+    <div class="px-4 sm:px-6 lg:px-8 flex justify-between h-16 items-center">
+      <div class="flex items-center gap-3">
+        <button
+          (click)="toggleSidebar()"
+          class="p-2 rounded-lg text-slate-600 hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
+        >
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+          </svg>
+        </button>
+        <div class="flex items-center gap-2 font-bold text-lg text-slate-800">
+          <span class="text-2xl">🎓</span>
+          <span class="hidden sm:inline">Prácticas Empresariales Universitarias</span>
+        </div>
+      </div>
+
+      <!-- Info usuario y logout -->
+      <div class="flex items-center gap-4">
+        <div *ngIf="user()" class="text-right hidden md:block">
+          <div class="text-sm font-semibold text-slate-800">
+            {{ user()?.firstName }} {{ user()?.lastName }}
+          </div>
+          <div class="text-xs text-slate-500">
+            {{ user()?.email }}
+          </div>
+        </div>
+
+        <span
+          *ngIf="user()"
+          [class]="'px-2.5 py-1 text-xs font-semibold rounded-full border ' + getRoleBadgeClass(user()?.role)"
+        >
+          {{ user()?.role }}
+        </span>
+
+        <button
+          (click)="logout()"
+          title="Cerrar sesión"
+          class="p-2 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
+        >
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <div class="flex-1 flex overflow-hidden">
+    <!-- Sidebar -->
+    <aside
+      *ngIf="isSidebarOpen()"
+      class="w-64 bg-white border-r border-slate-200 flex flex-col py-6 px-4 space-y-1 transition-all duration-200 ease-in-out"
+    >
+      <div class="text-xs font-bold text-slate-400 uppercase tracking-wider px-3 mb-2">
+        Menú Principal
+      </div>
+
+      <a
+        routerLink="/dashboard"
+        routerLinkActive="bg-indigo-50 text-indigo-700 font-semibold"
+        [routerLinkActiveOptions]="{exact: true}"
+        class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-slate-700 hover:bg-slate-50 transition-colors"
+      >
+        <svg class="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
+        </svg>
+        Dashboard
+      </a>
+
+      <!-- Opciones por rol -->
+      <ng-container *ngIf="user()?.role === Role.ADMIN || user()?.role === Role.COORDINATOR">
+        <div class="text-xs font-bold text-slate-400 uppercase tracking-wider px-3 mt-6 mb-2">
+          Administración
+        </div>
+        <a
+          routerLink="/users"
+          routerLinkActive="bg-indigo-50 text-indigo-700 font-semibold"
+          class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-slate-700 hover:bg-slate-50 transition-colors"
+        >
+          <svg class="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
+          </svg>
+          Usuarios y Roles
+        </a>
+      </ng-container>
+
+      <div class="text-xs font-bold text-slate-400 uppercase tracking-wider px-3 mt-6 mb-2">
+        Módulos
+      </div>
+      <a
+        routerLink="/companies"
+        routerLinkActive="bg-indigo-50 text-indigo-700 font-semibold"
+        class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-slate-700 hover:bg-slate-50 transition-colors"
+      >
+        <svg class="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+        </svg>
+        Empresas y Convenios
+      </a>
+
+      <a
+        routerLink="/offers"
+        routerLinkActive="bg-indigo-50 text-indigo-700 font-semibold"
+        class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-slate-700 hover:bg-slate-50 transition-colors"
+      >
+        <svg class="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+        </svg>
+        Ofertas de Práctica
+      </a>
+
+      <a
+        routerLink="/internships"
+        routerLinkActive="bg-indigo-50 text-indigo-700 font-semibold"
+        class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-slate-700 hover:bg-slate-50 transition-colors"
+      >
+        <svg class="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"></path>
+        </svg>
+        Prácticas Asignadas
+      </a>
+
+      <a
+        routerLink="/evaluations"
+        routerLinkActive="bg-indigo-50 text-indigo-700 font-semibold"
+        class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-slate-700 hover:bg-slate-50 transition-colors"
+      >
+        <svg class="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path>
+        </svg>
+        Evaluaciones
+      </a>
+    </aside>
+
+    <!-- Área de contenido principal -->
+    <main class="flex-1 overflow-y-auto p-6 sm:p-8">
+      <div class="max-w-7xl mx-auto">
+        <router-outlet></router-outlet>
+      </div>
+    </main>
+  </div>
+</div>
