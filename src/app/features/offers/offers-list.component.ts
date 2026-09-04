@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { OfferService } from '../../core/services/offer.service';
 import { CompanyService } from '../../core/services/company.service';
+import { ApplicationService } from '../../core/services/application.service';
 import { AuthService } from '../../core/services/auth.service';
 import { InternshipOffer, OfferModality, OfferStatus } from '../../core/models/offer.model';
 import { Company } from '../../core/models/company.model';
@@ -34,9 +35,12 @@ export class OffersListComponent implements OnInit {
   // Modales
   showCreateModal = signal<boolean>(false);
   selectedOfferForDetail = signal<InternshipOffer | null>(null);
+  showApplyModal = signal<boolean>(false);
+  selectedOfferForApply = signal<InternshipOffer | null>(null);
 
-  // Formulario
+  // Formularios
   offerForm: FormGroup;
+  applyForm: FormGroup;
 
   currentUser = computed(() => this.authService.currentUser());
   canPublish = computed(() => {
@@ -52,6 +56,7 @@ export class OffersListComponent implements OnInit {
   constructor(
     private readonly offerService: OfferService,
     private readonly companyService: CompanyService,
+    private readonly applicationService: ApplicationService,
     private readonly authService: AuthService,
     private readonly fb: FormBuilder,
   ) {
@@ -66,6 +71,11 @@ export class OffersListComponent implements OnInit {
       modality: [OfferModality.HYBRID, [Validators.required]],
       location: ['', [Validators.required]],
       expiresAt: [''],
+    });
+
+    this.applyForm = this.fb.group({
+      resumeUrl: [''],
+      coverLetter: [''],
     });
   }
 
@@ -207,6 +217,43 @@ export class OffersListComponent implements OnInit {
       default:
         return modality;
     }
+  }
+
+  openApplyModal(offer: InternshipOffer): void {
+    this.selectedOfferForApply.set(offer);
+    this.applyForm.reset();
+    this.showApplyModal.set(true);
+  }
+
+  closeApplyModal(): void {
+    this.showApplyModal.set(false);
+    this.selectedOfferForApply.set(null);
+  }
+
+  submitApplication(): void {
+    const offer = this.selectedOfferForApply();
+    if (!offer) return;
+
+    this.isLoading.set(true);
+    this.applicationService
+      .apply({
+        offerId: offer.id,
+        resumeUrl: this.applyForm.value.resumeUrl || undefined,
+        coverLetter: this.applyForm.value.coverLetter || undefined,
+      })
+      .subscribe({
+        next: () => {
+          this.showSuccess(`¡Te has postulado con éxito a "${offer.title}"!`);
+          this.closeApplyModal();
+          this.isLoading.set(false);
+        },
+        error: (err) => {
+          this.errorMessage.set(
+            err.error?.message || 'Error al enviar la postulación a la práctica.',
+          );
+          this.isLoading.set(false);
+        },
+      });
   }
 
   private showSuccess(msg: string): void {

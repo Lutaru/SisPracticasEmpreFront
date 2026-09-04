@@ -39,6 +39,13 @@ export const routes: Routes = [
           ),
       },
       {
+        path: 'applications',
+        loadComponent: () =>
+          import('./features/applications/applications-list.component').then(
+            (m) => m.ApplicationsListComponent,
+          ),
+      },
+      {
         path: '',
         redirectTo: 'dashboard',
         pathMatch: 'full',
