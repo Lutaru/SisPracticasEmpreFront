@@ -46,6 +46,13 @@ export const routes: Routes = [
           ),
       },
       {
+        path: 'internships',
+        loadComponent: () =>
+          import('./features/internships/internships-list.component').then(
+            (m) => m.InternshipsListComponent,
+          ),
+      },
+      {
         path: '',
         redirectTo: 'dashboard',
         pathMatch: 'full',
