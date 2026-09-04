@@ -53,6 +53,13 @@ export const routes: Routes = [
           ),
       },
       {
+        path: 'evaluations',
+        loadComponent: () =>
+          import('./features/evaluations/evaluations-list.component').then(
+            (m) => m.EvaluationsListComponent,
+          ),
+      },
+      {
         path: '',
         redirectTo: 'dashboard',
         pathMatch: 'full',

@@ -1,0 +1,609 @@
+<div class="space-y-6">
+  <!-- Encabezado -->
+  <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+    <div>
+      <h1 class="text-2xl font-bold text-slate-800">Evaluaciones y Calificaciones de Prácticas</h1>
+      <p class="text-sm text-slate-500 mt-1">
+        Rúbricas evaluativas del supervisor empresarial y del tutor docente universitario.
+      </p>
+    </div>
+
+    <!-- Indicador de escala -->
+    <div class="flex items-center gap-3 bg-white p-2.5 px-4 rounded-xl border border-slate-200 shadow-sm text-xs text-slate-600">
+      <span class="font-semibold text-slate-800">Escala de Calificación:</span>
+      <span class="inline-flex items-center gap-1">
+        <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span> Aprobado (≥ 3.0)
+      </span>
+      <span class="inline-flex items-center gap-1">
+        <span class="w-2.5 h-2.5 rounded-full bg-rose-500"></span> Reprobado (&lt; 3.0)
+      </span>
+      <span class="inline-flex items-center gap-1">
+        <span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span> 50% Empresa + 50% Tutor
+      </span>
+    </div>
+  </div>
+
+  <!-- Alertas -->
+  <div *ngIf="errorMessage()" class="p-4 bg-rose-50 border border-rose-200 text-rose-700 rounded-xl text-sm flex items-center justify-between">
+    <div class="flex items-center gap-2">
+      <svg class="w-5 h-5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path>
+      </svg>
+      <span>{{ errorMessage() }}</span>
+    </div>
+    <button (click)="errorMessage.set(null)" class="text-rose-500 hover:text-rose-700 font-bold">&times;</button>
+  </div>
+
+  <div *ngIf="successMessage()" class="p-4 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-xl text-sm flex items-center justify-between">
+    <div class="flex items-center gap-2">
+      <svg class="w-5 h-5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+      </svg>
+      <span>{{ successMessage() }}</span>
+    </div>
+    <button (click)="successMessage.set(null)" class="text-emerald-500 hover:text-emerald-700 font-bold">&times;</button>
+  </div>
+
+  <!-- Barra de Filtros -->
+  <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col sm:flex-row gap-4 justify-between items-center">
+    <div class="relative w-full sm:w-80">
+      <input
+        type="text"
+        [value]="searchTerm()"
+        (input)="searchTerm.set($any($event.target).value)"
+        placeholder="Buscar por estudiante, empresa o documento..."
+        class="w-full pl-10 pr-4 py-2 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+      />
+      <svg class="w-5 h-5 text-slate-400 absolute left-3 top-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+      </svg>
+    </div>
+
+    <div class="flex items-center gap-2 w-full sm:w-auto">
+      <label class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Estado:</label>
+      <select
+        [value]="statusFilter()"
+        (change)="statusFilter.set($any($event.target).value)"
+        class="text-sm border border-slate-300 rounded-lg px-3 py-2 bg-white focus:ring-2 focus:ring-indigo-500"
+      >
+        <option value="ALL">Todos los Estados</option>
+        <option [value]="InternshipStatus.INITIATED">Iniciada</option>
+        <option [value]="InternshipStatus.IN_PROGRESS">En Progreso</option>
+        <option [value]="InternshipStatus.FINAL_EVALUATION">En Evaluación Final</option>
+        <option [value]="InternshipStatus.COMPLETED">Completada / Finalizada</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="isLoading()" class="py-12 flex flex-col items-center justify-center space-y-3">
+    <div class="w-10 h-10 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+    <span class="text-sm font-medium text-slate-500">Cargando evaluaciones y prácticas...</span>
+  </div>
+
+  <!-- Empty State -->
+  <div
+    *ngIf="!isLoading() && filteredInternships().length === 0"
+    class="bg-white rounded-xl border border-dashed border-slate-300 p-12 text-center"
+  >
+    <svg class="mx-auto h-12 w-12 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path>
+    </svg>
+    <h3 class="mt-3 text-base font-semibold text-slate-800">No se encontraron prácticas para evaluar</h3>
+    <p class="mt-1 text-sm text-slate-500">
+      Las prácticas registradas aparecerán aquí cuando estén en proceso o pendientes de calificación.
+    </p>
+  </div>
+
+  <!-- Listado de Prácticas y Evaluaciones -->
+  <div *ngIf="!isLoading() && filteredInternships().length > 0" class="space-y-4">
+    <div
+      *ngFor="let item of filteredInternships()"
+      class="bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow transition-shadow overflow-hidden"
+    >
+      <div class="p-5 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        <!-- Info Practicante y Empresa -->
+        <div class="space-y-1.5 flex-1">
+          <div class="flex items-center gap-2 flex-wrap">
+            <h3 class="text-base font-bold text-slate-800">
+              {{ item.student?.firstName }} {{ item.student?.lastName }}
+            </h3>
+            <span class="text-xs text-slate-400">| Doc: {{ item.student?.documentNumber || 'N/A' }}</span>
+            
+            <!-- Badge de Estado de Práctica -->
+            <span
+              [ngClass]="{
+                'bg-blue-50 text-blue-700 border-blue-200': item.status === InternshipStatus.INITIATED,
+                'bg-indigo-50 text-indigo-700 border-indigo-200': item.status === InternshipStatus.IN_PROGRESS,
+                'bg-amber-50 text-amber-700 border-amber-200': item.status === InternshipStatus.FINAL_EVALUATION,
+                'bg-emerald-50 text-emerald-700 border-emerald-200': item.status === InternshipStatus.COMPLETED,
+                'bg-rose-50 text-rose-700 border-rose-200': item.status === InternshipStatus.CANCELLED
+              }"
+              class="px-2.5 py-0.5 rounded-full text-xs font-semibold border"
+            >
+              {{ item.status }}
+            </span>
+          </div>
+
+          <div class="text-xs text-slate-600 flex flex-wrap gap-y-1 gap-x-4">
+            <div>
+              <span class="font-semibold text-slate-700">Empresa:</span>
+              {{ item.company?.legalName || 'N/A' }}
+            </div>
+            <div>
+              <span class="font-semibold text-slate-700">Tutor Docente:</span>
+              {{ item.tutor ? (item.tutor.firstName + ' ' + item.tutor.lastName) : 'No asignado' }}
+            </div>
+            <div>
+              <span class="font-semibold text-slate-700">Período:</span>
+              {{ item.startDate }} a {{ item.endDate }}
+            </div>
+          </div>
+        </div>
+
+        <!-- Resumen de Notas (Tarjetas compactas) -->
+        <div class="flex items-center gap-3 bg-slate-50 p-3 rounded-xl border border-slate-200">
+          <!-- Nota Empresa -->
+          <div class="text-center px-3 border-r border-slate-200">
+            <span class="block text-[10px] font-bold uppercase tracking-wider text-slate-500">Empresa (50%)</span>
+            <div class="mt-0.5">
+              <span
+                *ngIf="summaries()[item.id]?.companyEvaluation"
+                class="text-base font-extrabold text-slate-800"
+              >
+                {{ summaries()[item.id].companyEvaluation?.score | number:'1.2-2' }}
+              </span>
+              <span
+                *ngIf="!summaries()[item.id]?.companyEvaluation"
+                class="text-xs text-amber-600 font-medium italic"
+              >
+                Pendiente
+              </span>
+            </div>
+          </div>
+
+          <!-- Nota Tutor -->
+          <div class="text-center px-3 border-r border-slate-200">
+            <span class="block text-[10px] font-bold uppercase tracking-wider text-slate-500">Tutor (50%)</span>
+            <div class="mt-0.5">
+              <span
+                *ngIf="summaries()[item.id]?.tutorEvaluation"
+                class="text-base font-extrabold text-slate-800"
+              >
+                {{ summaries()[item.id].tutorEvaluation?.score | number:'1.2-2' }}
+              </span>
+              <span
+                *ngIf="!summaries()[item.id]?.tutorEvaluation"
+                class="text-xs text-amber-600 font-medium italic"
+              >
+                Pendiente
+              </span>
+            </div>
+          </div>
+
+          <!-- Nota Definitiva -->
+          <div class="text-center px-3">
+            <span class="block text-[10px] font-bold uppercase tracking-wider text-slate-500">Definitiva</span>
+            <div class="mt-0.5 flex items-center justify-center gap-1.5">
+              <ng-container *ngIf="summaries()[item.id]?.finalGrade !== null && summaries()[item.id]?.finalGrade !== undefined">
+                <span
+                  class="text-lg font-black"
+                  [ngClass]="summaries()[item.id].finalGrade! >= 3.0 ? 'text-emerald-600' : 'text-rose-600'"
+                >
+                  {{ summaries()[item.id].finalGrade | number:'1.2-2' }}
+                </span>
+                <span
+                  class="px-1.5 py-0.5 text-[10px] font-bold rounded uppercase"
+                  [ngClass]="summaries()[item.id].finalGrade! >= 3.0 ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'"
+                >
+                  {{ summaries()[item.id].finalGrade! >= 3.0 ? 'Aprobó' : 'Reprobó' }}
+                </span>
+              </ng-container>
+              <span
+                *ngIf="summaries()[item.id]?.finalGrade === null || summaries()[item.id]?.finalGrade === undefined"
+                class="text-xs text-slate-400 italic"
+              >
+                Por calcular
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Botones de Acción -->
+        <div class="flex items-center gap-2 flex-wrap">
+          <!-- Evaluar como Empresa -->
+          <button
+            *ngIf="canEvaluateAsCompany(item)"
+            (click)="openRubricModal(item, EvaluationType.COMPANY)"
+            class="px-3 py-2 rounded-lg text-xs font-medium bg-indigo-50 text-indigo-700 hover:bg-indigo-100 transition-colors flex items-center gap-1"
+          >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+            </svg>
+            {{ summaries()[item.id].companyEvaluation ? 'Editar Eval. Empresa' : 'Evaluar Empresa' }}
+          </button>
+
+          <!-- Evaluar como Tutor -->
+          <button
+            *ngIf="canEvaluateAsTutor(item)"
+            (click)="openRubricModal(item, EvaluationType.TUTOR)"
+            class="px-3 py-2 rounded-lg text-xs font-medium bg-purple-50 text-purple-700 hover:bg-purple-100 transition-colors flex items-center gap-1"
+          >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+            {{ summaries()[item.id].tutorEvaluation ? 'Editar Eval. Tutor' : 'Evaluar Tutor' }}
+          </button>
+
+          <!-- Ver Acta Consolidada -->
+          <button
+            (click)="openSummaryModal(item)"
+            class="px-3 py-2 rounded-lg text-xs font-medium bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors flex items-center gap-1"
+          >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+            </svg>
+            Ver Acta
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: EVALUACIÓN CON RÚBRICA INTERACTIVA -->
+  <div
+    *ngIf="showRubricModal()"
+    class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto"
+  >
+    <div class="bg-white rounded-2xl max-w-2xl w-full shadow-2xl border border-slate-200 overflow-hidden my-8">
+      <!-- Modal Header con Promedio Dinámico -->
+      <div class="p-6 bg-slate-50 border-b border-slate-200 flex items-start justify-between">
+        <div>
+          <span
+            class="text-[11px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full"
+            [ngClass]="activeEvaluationType() === EvaluationType.COMPANY ? 'bg-indigo-100 text-indigo-800' : 'bg-purple-100 text-purple-800'"
+          >
+            {{ activeEvaluationType() === EvaluationType.COMPANY ? 'Evaluación Empresarial' : 'Evaluación Académica Docente' }}
+          </span>
+          <h2 class="text-xl font-bold text-slate-800 mt-1">
+            Rúbrica de Calificación Profesional
+          </h2>
+          <p class="text-xs text-slate-500">
+            Estudiante:
+            <strong class="text-slate-700">
+              {{ selectedInternship()?.student?.firstName }} {{ selectedInternship()?.student?.lastName }}
+            </strong>
+          </p>
+        </div>
+
+        <!-- Indicador de Nota Dinámica -->
+        <div class="text-right bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
+          <span class="block text-[10px] uppercase font-bold text-slate-400">Nota Calculada</span>
+          <span
+            class="text-2xl font-black"
+            [ngClass]="calculatedScore() >= 3.0 ? 'text-emerald-600' : 'text-rose-600'"
+          >
+            {{ calculatedScore() | number:'1.2-2' }}
+          </span>
+          <span class="text-xs text-slate-400 font-semibold">/ 5.0</span>
+        </div>
+      </div>
+
+      <!-- Modal Body con Criterios y Formulario -->
+      <div class="p-6 space-y-6 max-h-[70vh] overflow-y-auto">
+        <!-- Criterios de la Rúbrica -->
+        <div class="space-y-4">
+          <h3 class="text-xs font-bold text-slate-500 uppercase tracking-wider">
+            1. Criterios de Evaluación y Desempeño
+          </h3>
+
+          <div
+            *ngFor="let criterion of activeCriteria()"
+            class="p-4 rounded-xl border border-slate-200 bg-slate-50/50 space-y-3"
+          >
+            <div class="flex items-start justify-between gap-4">
+              <div>
+                <h4 class="text-sm font-semibold text-slate-800">{{ criterion.name }}</h4>
+                <p class="text-xs text-slate-500 mt-0.5">{{ criterion.description }}</p>
+              </div>
+              <div class="flex items-center gap-1.5 flex-shrink-0">
+                <span class="text-lg font-bold text-indigo-700">
+                  {{ criteriaScores()[criterion.id] !== undefined ? (criteriaScores()[criterion.id] | number:'1.1-1') : '4.0' }}
+                </span>
+                <span class="text-xs text-slate-400">/ 5.0</span>
+              </div>
+            </div>
+
+            <!-- Slider interactivo -->
+            <div class="flex items-center gap-4">
+              <input
+                type="range"
+                min="0"
+                max="5"
+                step="0.1"
+                [value]="criteriaScores()[criterion.id] || 4.0"
+                (input)="updateCriterionScore(criterion.id, $any($event.target).value)"
+                class="w-full accent-indigo-600 h-2 bg-slate-200 rounded-lg cursor-pointer"
+              />
+              <input
+                type="number"
+                min="0"
+                max="5"
+                step="0.1"
+                [value]="criteriaScores()[criterion.id] || 4.0"
+                (input)="updateCriterionScore(criterion.id, $any($event.target).value)"
+                class="w-16 px-2 py-1 text-xs font-bold text-center border border-slate-300 rounded-md focus:ring-1 focus:ring-indigo-500"
+              />
+            </div>
+          </div>
+        </div>
+
+        <!-- Formulario Cualitativo -->
+        <form [formGroup]="evaluationForm" class="space-y-4 border-t border-slate-200 pt-5">
+          <h3 class="text-xs font-bold text-slate-500 uppercase tracking-wider">
+            2. Concepto Cualitativo y Retroalimentación
+          </h3>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">
+              Principales Fortalezas Observadas *
+            </label>
+            <textarea
+              formControlName="strengths"
+              rows="3"
+              placeholder="Ej. Destacada iniciativa técnica, excelente comunicación con el equipo y rápida curva de aprendizaje..."
+              class="w-full text-sm border border-slate-300 rounded-lg p-3 focus:ring-2 focus:ring-indigo-500"
+            ></textarea>
+            <span
+              *ngIf="evaluationForm.get('strengths')?.touched && evaluationForm.get('strengths')?.invalid"
+              class="text-xs text-rose-600 mt-0.5 block"
+            >
+              Las fortalezas son obligatorias (mínimo 10 caracteres).
+            </span>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">
+              Aspectos y Habilidades por Fortalecer *
+            </label>
+            <textarea
+              formControlName="improvements"
+              rows="3"
+              placeholder="Ej. Continuar profundizando en arquitecturas orientadas a servicios y estimación precisa de entregables..."
+              class="w-full text-sm border border-slate-300 rounded-lg p-3 focus:ring-2 focus:ring-indigo-500"
+            ></textarea>
+            <span
+              *ngIf="evaluationForm.get('improvements')?.touched && evaluationForm.get('improvements')?.invalid"
+              class="text-xs text-rose-600 mt-0.5 block"
+            >
+              Los aspectos a fortalecer son obligatorios (mínimo 10 caracteres).
+            </span>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">
+              Recomendaciones Generales (Opcional)
+            </label>
+            <textarea
+              formControlName="recommendations"
+              rows="2"
+              placeholder="Recomendaciones finales para el desarrollo profesional del estudiante..."
+              class="w-full text-sm border border-slate-300 rounded-lg p-3 focus:ring-2 focus:ring-indigo-500"
+            ></textarea>
+          </div>
+        </form>
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="p-4 bg-slate-50 border-t border-slate-200 flex justify-end gap-3">
+        <button
+          type="button"
+          (click)="closeRubricModal()"
+          class="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-200 rounded-lg transition-colors"
+        >
+          Cancelar
+        </button>
+        <button
+          type="button"
+          (click)="submitEvaluation()"
+          [disabled]="isSubmitting() || evaluationForm.invalid"
+          class="px-5 py-2 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 rounded-lg shadow-sm transition-colors flex items-center gap-2"
+        >
+          <svg *ngIf="isSubmitting()" class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></svg>
+          Guardar y Emitir Evaluación
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: ACTA CONSOLIDADA DE CALIFICACIONES (PRINTABLE) -->
+  <div
+    *ngIf="showSummaryModal()"
+    class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto"
+  >
+    <div class="bg-white rounded-2xl max-w-3xl w-full shadow-2xl border border-slate-200 overflow-hidden my-8 print:shadow-none print:border-none print:m-0">
+      <!-- Encabezado Institucional del Acta -->
+      <div class="p-6 bg-slate-900 text-white flex justify-between items-start print:bg-white print:text-black">
+        <div>
+          <span class="text-xs uppercase font-bold tracking-widest text-indigo-400 print:text-slate-600">
+            Universidad - Coordinación de Prácticas
+          </span>
+          <h2 class="text-xl font-black mt-1">Acta Consolidada de Finalización de Práctica</h2>
+          <p class="text-xs text-slate-300 print:text-slate-500">
+            Registro Oficial de Evaluación Integral y Calificación Definitiva
+          </p>
+        </div>
+
+        <button
+          type="button"
+          (click)="closeSummaryModal()"
+          class="text-slate-400 hover:text-white print:hidden text-2xl font-bold"
+        >
+          &times;
+        </button>
+      </div>
+
+      <!-- Cuerpo del Acta -->
+      <div class="p-6 space-y-6 text-sm text-slate-700 print:p-0 print:space-y-4">
+        <!-- Datos Generales -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200 print:bg-transparent print:border">
+          <div>
+            <span class="block text-xs font-bold text-slate-500 uppercase">Estudiante Practicante:</span>
+            <strong class="text-slate-800 text-base">
+              {{ activeSummary()?.internship?.student?.firstName }} {{ activeSummary()?.internship?.student?.lastName }}
+            </strong>
+            <span class="block text-xs text-slate-600">
+              Doc. Identidad: {{ activeSummary()?.internship?.student?.documentNumber || 'N/A' }}
+            </span>
+            <span class="block text-xs text-slate-600">
+              Correo: {{ activeSummary()?.internship?.student?.email }}
+            </span>
+          </div>
+
+          <div>
+            <span class="block text-xs font-bold text-slate-500 uppercase">Empresa Vinculada:</span>
+            <strong class="text-slate-800 text-base">
+              {{ activeSummary()?.internship?.company?.legalName }}
+            </strong>
+            <span class="block text-xs text-slate-600">
+              Supervisor: {{ activeSummary()?.internship?.company?.supervisorName || 'No indicado' }}
+            </span>
+            <span class="block text-xs text-slate-600">
+              Tutor Académico:
+              {{ activeSummary()?.internship?.tutor ? (activeSummary()?.internship?.tutor?.firstName + ' ' + activeSummary()?.internship?.tutor?.lastName) : 'No asignado' }}
+            </span>
+          </div>
+        </div>
+
+        <!-- Calificaciones Desglosadas -->
+        <div class="space-y-4">
+          <h3 class="text-xs font-bold uppercase tracking-wider text-slate-500 border-b pb-1">
+            Desglose de Calificaciones de Rúbrica
+          </h3>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <!-- Evaluación Empresa -->
+            <div class="border border-slate-200 rounded-xl p-4 space-y-3 bg-white">
+              <div class="flex items-center justify-between border-b pb-2">
+                <span class="font-bold text-slate-800">Evaluación Empresa</span>
+                <span class="text-xs bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded font-semibold">50%</span>
+              </div>
+
+              <div *ngIf="activeSummary()?.companyEvaluation" class="space-y-2">
+                <div class="flex items-center justify-between">
+                  <span class="text-xs text-slate-600">Nota Cuantitativa:</span>
+                  <span class="text-lg font-black text-indigo-700">
+                    {{ activeSummary()?.companyEvaluation?.score | number:'1.2-2' }} / 5.0
+                  </span>
+                </div>
+                <div *ngIf="activeSummary()?.companyEvaluation?.strengths" class="text-xs text-slate-600 bg-slate-50 p-2.5 rounded-lg">
+                  <strong class="text-slate-700 block">Fortalezas:</strong>
+                  {{ activeSummary()?.companyEvaluation?.strengths }}
+                </div>
+              </div>
+
+              <div *ngIf="!activeSummary()?.companyEvaluation" class="py-4 text-center text-xs text-amber-600 italic">
+                Pendiente de registro por la empresa aliada.
+              </div>
+            </div>
+
+            <!-- Evaluación Tutor -->
+            <div class="border border-slate-200 rounded-xl p-4 space-y-3 bg-white">
+              <div class="flex items-center justify-between border-b pb-2">
+                <span class="font-bold text-slate-800">Evaluación Tutor Académico</span>
+                <span class="text-xs bg-purple-50 text-purple-700 px-2 py-0.5 rounded font-semibold">50%</span>
+              </div>
+
+              <div *ngIf="activeSummary()?.tutorEvaluation" class="space-y-2">
+                <div class="flex items-center justify-between">
+                  <span class="text-xs text-slate-600">Nota Cuantitativa:</span>
+                  <span class="text-lg font-black text-purple-700">
+                    {{ activeSummary()?.tutorEvaluation?.score | number:'1.2-2' }} / 5.0
+                  </span>
+                </div>
+                <div *ngIf="activeSummary()?.tutorEvaluation?.strengths" class="text-xs text-slate-600 bg-slate-50 p-2.5 rounded-lg">
+                  <strong class="text-slate-700 block">Fortalezas:</strong>
+                  {{ activeSummary()?.tutorEvaluation?.strengths }}
+                </div>
+              </div>
+
+              <div *ngIf="!activeSummary()?.tutorEvaluation" class="py-4 text-center text-xs text-amber-600 italic">
+                Pendiente de registro por el tutor docente.
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Dictamen Final y Nota Consolidada -->
+        <div class="bg-slate-50 border border-slate-200 rounded-xl p-5 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div>
+            <span class="block text-xs font-bold text-slate-500 uppercase">Calificación Definitiva Ponderada</span>
+            <div class="flex items-baseline gap-2 mt-1">
+              <span
+                *ngIf="activeSummary()?.finalGrade !== null && activeSummary()?.finalGrade !== undefined"
+                class="text-3xl font-black"
+                [ngClass]="activeSummary()!.finalGrade! >= 3.0 ? 'text-emerald-600' : 'text-rose-600'"
+              >
+                {{ activeSummary()!.finalGrade | number:'1.2-2' }}
+              </span>
+              <span *ngIf="activeSummary()?.finalGrade !== null && activeSummary()?.finalGrade !== undefined" class="text-slate-400 font-bold">
+                / 5.00
+              </span>
+              <span
+                *ngIf="activeSummary()?.finalGrade === null || activeSummary()?.finalGrade === undefined"
+                class="text-sm font-semibold text-amber-600 italic"
+              >
+                Calificaciones incompletas
+              </span>
+            </div>
+          </div>
+
+          <div class="text-right">
+            <span class="block text-xs font-bold text-slate-500 uppercase">Dictamen Oficial</span>
+            <div class="mt-1">
+              <span
+                *ngIf="activeSummary()?.passed === true"
+                class="px-3 py-1 text-sm font-extrabold rounded-full bg-emerald-100 text-emerald-800 uppercase tracking-wider"
+              >
+                APROBADO
+              </span>
+              <span
+                *ngIf="activeSummary()?.passed === false"
+                class="px-3 py-1 text-sm font-extrabold rounded-full bg-rose-100 text-rose-800 uppercase tracking-wider"
+              >
+                REPROBADO
+              </span>
+              <span
+                *ngIf="activeSummary()?.passed === null"
+                class="px-3 py-1 text-xs font-semibold rounded-full bg-amber-100 text-amber-800 uppercase"
+              >
+                PENDIENTE
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal Footer con Acciones -->
+      <div class="p-4 bg-slate-50 border-t border-slate-200 flex justify-end gap-3 print:hidden">
+        <button
+          type="button"
+          (click)="printSummary()"
+          class="px-4 py-2 text-sm font-semibold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-colors flex items-center gap-2"
+        >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path>
+          </svg>
+          Imprimir / Guardar Acta
+        </button>
+        <button
+          type="button"
+          (click)="closeSummaryModal()"
+          class="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-200 rounded-lg transition-colors"
+        >
+          Cerrar
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
