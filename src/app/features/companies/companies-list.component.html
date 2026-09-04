@@ -1,0 +1,302 @@
+<div class="space-y-6">
+  <!-- Cabecera de la sección -->
+  <div class="sm:flex sm:items-center sm:justify-between">
+    <div>
+      <h1 class="text-2xl font-bold text-slate-800">Directorio de Empresas y Convenios</h1>
+      <p class="text-sm text-slate-500 mt-1">
+        Gestión integral de empresas aliadas, convenios marco institucionales y estados de validación jurídica.
+      </p>
+    </div>
+    <div class="mt-4 sm:mt-0 flex gap-3">
+      <button
+        *ngIf="isCoordinatorOrAdmin() || currentUser()?.role === Role.COMPANY"
+        (click)="openCreateModal()"
+        class="inline-flex items-center px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-lg shadow-sm transition-colors cursor-pointer"
+      >
+        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+        </svg>
+        Registrar Empresa
+      </button>
+    </div>
+  </div>
+
+  <!-- Alertas de estado -->
+  <div *ngIf="successMessage()" class="p-4 bg-emerald-50 border border-emerald-200 rounded-lg text-emerald-800 text-sm flex items-center justify-between">
+    <div class="flex items-center gap-2">
+      <span>✅</span>
+      <span>{{ successMessage() }}</span>
+    </div>
+    <button (click)="successMessage.set(null)" class="text-emerald-600 hover:text-emerald-900 font-bold">&times;</button>
+  </div>
+
+  <div *ngIf="errorMessage()" class="p-4 bg-red-50 border border-red-200 rounded-lg text-red-800 text-sm flex items-center justify-between">
+    <div class="flex items-center gap-2">
+      <span>⚠️</span>
+      <span>{{ errorMessage() }}</span>
+    </div>
+    <button (click)="errorMessage.set(null)" class="text-red-600 hover:text-red-900 font-bold">&times;</button>
+  </div>
+
+  <!-- Barra de Filtros -->
+  <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm grid grid-cols-1 sm:grid-cols-3 gap-4">
+    <div>
+      <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Buscar Empresa / NIT</label>
+      <input
+        type="text"
+        [(ngModel)]="searchTerm"
+        (keyup.enter)="onFilterChange()"
+        placeholder="Ej: TechCorp, 901234567..."
+        class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+      />
+    </div>
+
+    <div>
+      <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Sector Económico</label>
+      <input
+        type="text"
+        [(ngModel)]="selectedSector"
+        (keyup.enter)="onFilterChange()"
+        placeholder="Ej: Tecnología, Salud, Finanzas..."
+        class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+      />
+    </div>
+
+    <div>
+      <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Estado de Validación</label>
+      <div class="flex gap-2">
+        <select
+          [(ngModel)]="selectedVerified"
+          (change)="onFilterChange()"
+          class="flex-1 px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+        >
+          <option value="">Todos los estados</option>
+          <option value="true">Verificadas</option>
+          <option value="false">Pendientes de Aprobación</option>
+        </select>
+        <button
+          (click)="onFilterChange()"
+          class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-semibold rounded-lg transition-colors cursor-pointer"
+        >
+          Filtrar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tabla de empresas -->
+  <div class="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+    <div *ngIf="isLoading()" class="p-8 text-center text-slate-500">
+      <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mb-2"></div>
+      <p class="text-sm">Cargando directorio de empresas...</p>
+    </div>
+
+    <div *ngIf="!isLoading() && companies().length === 0" class="p-12 text-center text-slate-500">
+      <span class="text-4xl">🏢</span>
+      <h3 class="mt-2 text-base font-semibold text-slate-800">No se encontraron empresas</h3>
+      <p class="mt-1 text-sm text-slate-500">No hay registros que coincidan con los criterios de búsqueda.</p>
+    </div>
+
+    <div *ngIf="!isLoading() && companies().length > 0" class="overflow-x-auto">
+      <table class="min-w-full divide-y divide-slate-200 text-left text-sm">
+        <thead class="bg-slate-50 text-slate-600 font-semibold">
+          <tr>
+            <th class="px-6 py-3.5">Empresa / Razón Social</th>
+            <th class="px-6 py-3.5">NIT</th>
+            <th class="px-6 py-3.5">Sector & Ubicación</th>
+            <th class="px-6 py-3.5">Contacto</th>
+            <th class="px-6 py-3.5">Convenios</th>
+            <th class="px-6 py-3.5">Estado</th>
+            <th class="px-6 py-3.5 text-right">Acciones</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-200 text-slate-700">
+          <tr *ngFor="let c of companies()" class="hover:bg-slate-50 transition-colors">
+            <td class="px-6 py-4">
+              <div class="font-bold text-slate-900">{{ c.legalName }}</div>
+              <div *ngIf="c.tradeName" class="text-xs text-slate-500">{{ c.tradeName }}</div>
+              <div *ngIf="c.website" class="mt-0.5">
+                <a [href]="c.website" target="_blank" class="text-xs text-indigo-600 hover:underline">
+                  {{ c.website }}
+                </a>
+              </div>
+            </td>
+            <td class="px-6 py-4 font-mono text-xs text-slate-800">
+              {{ c.nit }}
+            </td>
+            <td class="px-6 py-4">
+              <span class="inline-block px-2 py-0.5 bg-slate-100 text-slate-700 rounded text-xs font-medium">
+                {{ c.sector }}
+              </span>
+              <div class="text-xs text-slate-500 mt-1">{{ c.city }}</div>
+            </td>
+            <td class="px-6 py-4 text-xs">
+              <div>{{ c.contactEmail }}</div>
+              <div class="text-slate-500">{{ c.phone }}</div>
+            </td>
+            <td class="px-6 py-4">
+              <span
+                class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold"
+                [ngClass]="(c.agreements?.length || 0) > 0 ? 'bg-indigo-50 text-indigo-700' : 'bg-slate-100 text-slate-600'"
+              >
+                {{ c.agreements?.length || 0 }} convenio(s)
+              </span>
+            </td>
+            <td class="px-6 py-4">
+              <span
+                class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold"
+                [ngClass]="c.isVerified ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-amber-50 text-amber-700 border border-amber-200'"
+              >
+                <span class="w-1.5 h-1.5 rounded-full mr-1.5" [ngClass]="c.isVerified ? 'bg-emerald-500' : 'bg-amber-500'"></span>
+                {{ c.isVerified ? 'Verificada' : 'Pendiente' }}
+              </span>
+            </td>
+            <td class="px-6 py-4 text-right space-x-2">
+              <button
+                *ngIf="isCoordinatorOrAdmin()"
+                (click)="toggleVerification(c)"
+                [title]="c.isVerified ? 'Marcar como pendiente' : 'Aprobar verificación'"
+                class="text-xs px-2.5 py-1.5 rounded font-medium border transition-colors cursor-pointer"
+                [ngClass]="c.isVerified ? 'border-amber-300 text-amber-700 hover:bg-amber-50' : 'border-emerald-300 text-emerald-700 hover:bg-emerald-50'"
+              >
+                {{ c.isVerified ? 'Desactivar' : 'Aprobar' }}
+              </button>
+
+              <button
+                *ngIf="isCoordinatorOrAdmin() || (currentUser()?.role === Role.COMPANY && c.userId === currentUser()?.id)"
+                (click)="openAgreementModal(c)"
+                class="text-xs px-2.5 py-1.5 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 rounded font-medium transition-colors cursor-pointer"
+              >
+                + Convenio
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Modal para Registrar Empresa -->
+  <div *ngIf="showCreateModal()" class="fixed inset-0 z-50 overflow-y-auto bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-xl max-w-2xl w-full p-6 sm:p-8 space-y-6">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-4">
+        <h3 class="text-lg font-bold text-slate-800">Registrar Nueva Empresa Aliada</h3>
+        <button (click)="closeCreateModal()" class="text-slate-400 hover:text-slate-600 text-2xl leading-none">&times;</button>
+      </div>
+
+      <form [formGroup]="companyForm" (ngSubmit)="submitCompany()" class="space-y-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Razón Social *</label>
+            <input formControlName="legalName" type="text" placeholder="Ej: TechCorp Solutions S.A.S." class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Nombre Comercial</label>
+            <input formControlName="tradeName" type="text" placeholder="Ej: TechCorp" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">NIT / Identificación Tributaria *</label>
+            <input formControlName="nit" type="text" placeholder="Ej: 901234567-8" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Sector Económico *</label>
+            <input formControlName="sector" type="text" placeholder="Ej: Software, Salud, Banca..." class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Correo Electrónico de Contacto *</label>
+            <input formControlName="contactEmail" type="email" placeholder="contacto@empresa.com" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Teléfono de Contacto *</label>
+            <input formControlName="phone" type="text" placeholder="+57 601 2345678" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Ciudad *</label>
+            <input formControlName="city" type="text" placeholder="Ej: Bogotá, Medellín..." class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Dirección *</label>
+            <input formControlName="address" type="text" placeholder="Calle / Carrera..." class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Sitio Web</label>
+          <input formControlName="website" type="url" placeholder="https://www.empresa.com" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Descripción de la Empresa</label>
+          <textarea formControlName="description" rows="2" placeholder="Resumen de actividades, misión o áreas de práctica..." class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none"></textarea>
+        </div>
+
+        <div class="flex justify-end gap-3 pt-4 border-t border-slate-100">
+          <button type="button" (click)="closeCreateModal()" class="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-lg font-medium cursor-pointer">
+            Cancelar
+          </button>
+          <button type="submit" [disabled]="companyForm.invalid || isLoading()" class="px-5 py-2 text-sm bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-semibold rounded-lg shadow-sm cursor-pointer">
+            Guardar Empresa
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal para Registrar Convenio -->
+  <div *ngIf="showAgreementModal()" class="fixed inset-0 z-50 overflow-y-auto bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-xl max-w-lg w-full p-6 sm:p-8 space-y-6">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-4">
+        <div>
+          <h3 class="text-lg font-bold text-slate-800">Formalizar Convenio Marco</h3>
+          <p class="text-xs text-slate-500">Empresa: {{ selectedCompanyForAgreement()?.legalName }}</p>
+        </div>
+        <button (click)="closeAgreementModal()" class="text-slate-400 hover:text-slate-600 text-2xl leading-none">&times;</button>
+      </div>
+
+      <form [formGroup]="agreementForm" (ngSubmit)="submitAgreement()" class="space-y-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Número o Radicado de Convenio *</label>
+          <input formControlName="agreementNumber" type="text" placeholder="Ej: CONV-2026-002" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Fecha de Inicio *</label>
+            <input formControlName="startDate" type="date" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Fecha de Vencimiento *</label>
+            <input formControlName="endDate" type="date" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Enlace al Documento PDF del Convenio</label>
+          <input formControlName="documentUrl" type="url" placeholder="https://..." class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Observaciones / Alcance Académico</label>
+          <textarea formControlName="observations" rows="2" placeholder="Términos particulares o áreas autorizadas..." class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none"></textarea>
+        </div>
+
+        <div class="flex justify-end gap-3 pt-4 border-t border-slate-100">
+          <button type="button" (click)="closeAgreementModal()" class="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-lg font-medium cursor-pointer">
+            Cancelar
+          </button>
+          <button type="submit" [disabled]="agreementForm.invalid || isLoading()" class="px-5 py-2 text-sm bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-semibold rounded-lg shadow-sm cursor-pointer">
+            Registrar Convenio
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>

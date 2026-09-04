@@ -25,6 +25,13 @@ export const routes: Routes = [
           ),
       },
       {
+        path: 'companies',
+        loadComponent: () =>
+          import('./features/companies/companies-list.component').then(
+            (m) => m.CompaniesListComponent,
+          ),
+      },
+      {
         path: '',
         redirectTo: 'dashboard',
         pathMatch: 'full',
