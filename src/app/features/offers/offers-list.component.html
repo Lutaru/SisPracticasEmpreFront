@@ -1,0 +1,326 @@
+<div class="space-y-6">
+  <!-- Cabecera de la sección -->
+  <div class="sm:flex sm:items-center sm:justify-between">
+    <div>
+      <h1 class="text-2xl font-bold text-slate-800">Convocatorias de Prácticas</h1>
+      <p class="text-sm text-slate-500 mt-1">
+        Explora las ofertas activas publicadas por empresas aliadas verificadas por la institución.
+      </p>
+    </div>
+    <div class="mt-4 sm:mt-0 flex gap-3">
+      <button
+        *ngIf="canPublish()"
+        (click)="openCreateModal()"
+        class="inline-flex items-center px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-lg shadow-sm transition-colors cursor-pointer"
+      >
+        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+        </svg>
+        Publicar Convocatoria
+      </button>
+    </div>
+  </div>
+
+  <!-- Alertas de estado -->
+  <div *ngIf="successMessage()" class="p-4 bg-emerald-50 border border-emerald-200 rounded-lg text-emerald-800 text-sm flex items-center justify-between">
+    <div class="flex items-center gap-2">
+      <span>✅</span>
+      <span>{{ successMessage() }}</span>
+    </div>
+    <button (click)="successMessage.set(null)" class="text-emerald-600 hover:text-emerald-900 font-bold">&times;</button>
+  </div>
+
+  <div *ngIf="errorMessage()" class="p-4 bg-red-50 border border-red-200 rounded-lg text-red-800 text-sm flex items-center justify-between">
+    <div class="flex items-center gap-2">
+      <span>⚠️</span>
+      <span>{{ errorMessage() }}</span>
+    </div>
+    <button (click)="errorMessage.set(null)" class="text-red-600 hover:text-red-900 font-bold">&times;</button>
+  </div>
+
+  <!-- Barra de Filtros -->
+  <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm grid grid-cols-1 sm:grid-cols-3 gap-4">
+    <div>
+      <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Buscar por Palabra Clave</label>
+      <input
+        type="text"
+        [(ngModel)]="searchTerm"
+        (keyup.enter)="onFilterChange()"
+        placeholder="Ej: Frontend, Datos, Angular..."
+        class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+      />
+    </div>
+
+    <div>
+      <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Programa / Perfil Solicitado</label>
+      <input
+        type="text"
+        [(ngModel)]="selectedProfile"
+        (keyup.enter)="onFilterChange()"
+        placeholder="Ej: Sistemas, Industrial..."
+        class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+      />
+    </div>
+
+    <div>
+      <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Modalidad de Práctica</label>
+      <div class="flex gap-2">
+        <select
+          [(ngModel)]="selectedModality"
+          (change)="onFilterChange()"
+          class="flex-1 px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+        >
+          <option value="">Todas las modalidades</option>
+          <option [value]="OfferModality.REMOTE">Remota</option>
+          <option [value]="OfferModality.HYBRID">Híbrida</option>
+          <option [value]="OfferModality.ON_SITE">Presencial</option>
+        </select>
+        <button
+          (click)="onFilterChange()"
+          class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-semibold rounded-lg transition-colors cursor-pointer"
+        >
+          Filtrar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="isLoading()" class="p-12 text-center text-slate-500 bg-white rounded-xl border border-slate-200 shadow-sm">
+    <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mb-2"></div>
+    <p class="text-sm">Cargando convocatorias...</p>
+  </div>
+
+  <!-- Empty State -->
+  <div *ngIf="!isLoading() && offers().length === 0" class="p-12 text-center text-slate-500 bg-white rounded-xl border border-slate-200 shadow-sm">
+    <span class="text-4xl">💼</span>
+    <h3 class="mt-2 text-base font-semibold text-slate-800">No hay convocatorias disponibles</h3>
+    <p class="mt-1 text-sm text-slate-500">Pronto se publicarán nuevas vacantes de prácticas universitarias.</p>
+  </div>
+
+  <!-- Cuadrícula de Convocatorias -->
+  <div *ngIf="!isLoading() && offers().length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    <div
+      *ngFor="let offer of offers()"
+      class="bg-white border border-slate-200 rounded-xl p-6 shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between"
+    >
+      <div class="space-y-3">
+        <!-- Empresa y Estado -->
+        <div class="flex items-start justify-between gap-2">
+          <div>
+            <div class="text-xs font-semibold text-indigo-600 uppercase tracking-wider flex items-center gap-1">
+              <span>🏢</span>
+              <span>{{ offer.company?.legalName }}</span>
+            </div>
+            <h3 class="font-bold text-slate-900 text-base mt-1 leading-snug">
+              {{ offer.title }}
+            </h3>
+          </div>
+          <span
+            class="px-2 py-0.5 rounded-full text-xs font-semibold border shrink-0"
+            [ngClass]="offer.status === OfferStatus.OPEN ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-slate-100 text-slate-600 border-slate-200'"
+          >
+            {{ offer.status === OfferStatus.OPEN ? 'Abierta' : 'Cerrada' }}
+          </span>
+        </div>
+
+        <!-- Badges de información -->
+        <div class="flex flex-wrap gap-1.5 text-xs">
+          <span [class]="'px-2 py-0.5 rounded-md border font-medium ' + getModalityBadgeClass(offer.modality)">
+            {{ getModalityLabel(offer.modality) }}
+          </span>
+          <span class="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 font-medium">
+            📍 {{ offer.location }}
+          </span>
+          <span *ngIf="offer.salaryCompensation" class="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-800 font-medium">
+            💰 {{ offer.salaryCompensation }}
+          </span>
+        </div>
+
+        <!-- Perfil requerido -->
+        <div class="text-xs text-slate-600">
+          <span class="font-semibold text-slate-800">Perfil:</span> {{ offer.profileNeeded }}
+        </div>
+
+        <!-- Vacantes -->
+        <div class="text-xs text-slate-500">
+          <span class="font-semibold text-slate-700">Vacantes:</span> {{ offer.vacancies }} puesto(s)
+        </div>
+
+        <!-- Resumen de descripción -->
+        <p class="text-xs text-slate-600 line-clamp-3 leading-relaxed">
+          {{ offer.description }}
+        </p>
+      </div>
+
+      <!-- Acciones de la tarjeta -->
+      <div class="mt-5 pt-4 border-t border-slate-100 flex items-center justify-between">
+        <button
+          (click)="openDetail(offer)"
+          class="text-xs font-semibold text-indigo-600 hover:text-indigo-800 cursor-pointer"
+        >
+          Ver detalles completos →
+        </button>
+
+        <div class="flex items-center gap-2">
+          <!-- Si es empresa o coordinador, botón para cambiar estado -->
+          <button
+            *ngIf="isCoordinatorOrAdmin() || (currentUser()?.role === Role.COMPANY && offer.company?.userId === currentUser()?.id)"
+            (click)="toggleOfferStatus(offer)"
+            [title]="offer.status === OfferStatus.OPEN ? 'Cerrar convocatoria' : 'Reabrir convocatoria'"
+            class="text-xs px-2.5 py-1 rounded border font-medium transition-colors cursor-pointer"
+            [ngClass]="offer.status === OfferStatus.OPEN ? 'border-amber-300 text-amber-700 hover:bg-amber-50' : 'border-emerald-300 text-emerald-700 hover:bg-emerald-50'"
+          >
+            {{ offer.status === OfferStatus.OPEN ? 'Cerrar' : 'Reabrir' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Detalle de Convocatoria -->
+  <div *ngIf="selectedOfferForDetail()" class="fixed inset-0 z-50 overflow-y-auto bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-xl max-w-2xl w-full p-6 sm:p-8 space-y-6">
+      <div class="flex items-start justify-between border-b border-slate-100 pb-4">
+        <div>
+          <div class="text-xs font-bold text-indigo-600 uppercase tracking-wider">
+            {{ selectedOfferForDetail()?.company?.legalName }}
+          </div>
+          <h2 class="text-xl font-bold text-slate-900 mt-1">
+            {{ selectedOfferForDetail()?.title }}
+          </h2>
+          <div class="flex items-center gap-2 mt-2">
+            <span [class]="'px-2.5 py-0.5 rounded-full text-xs font-semibold border ' + getModalityBadgeClass(selectedOfferForDetail()!.modality)">
+              {{ getModalityLabel(selectedOfferForDetail()!.modality) }}
+            </span>
+            <span class="text-xs text-slate-500">📍 {{ selectedOfferForDetail()?.location }}</span>
+            <span *ngIf="selectedOfferForDetail()?.salaryCompensation" class="text-xs font-semibold text-emerald-700">
+              {{ selectedOfferForDetail()?.salaryCompensation }}
+            </span>
+          </div>
+        </div>
+        <button (click)="closeDetail()" class="text-slate-400 hover:text-slate-600 text-2xl leading-none">&times;</button>
+      </div>
+
+      <div class="space-y-4 text-sm text-slate-700 max-h-96 overflow-y-auto pr-2">
+        <div>
+          <h4 class="font-bold text-slate-900 text-xs uppercase tracking-wider text-slate-500 mb-1">Descripción del Cargo y Funciones</h4>
+          <p class="whitespace-pre-line leading-relaxed text-slate-700">{{ selectedOfferForDetail()?.description }}</p>
+        </div>
+
+        <div>
+          <h4 class="font-bold text-slate-900 text-xs uppercase tracking-wider text-slate-500 mb-1">Requisitos y Habilidades</h4>
+          <p class="whitespace-pre-line leading-relaxed text-slate-700">{{ selectedOfferForDetail()?.requirements }}</p>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4 p-4 bg-slate-50 rounded-xl">
+          <div>
+            <div class="text-xs text-slate-500">Programa Académico</div>
+            <div class="font-semibold text-slate-800">{{ selectedOfferForDetail()?.profileNeeded }}</div>
+          </div>
+          <div>
+            <div class="text-xs text-slate-500">Vacantes Disponibles</div>
+            <div class="font-semibold text-slate-800">{{ selectedOfferForDetail()?.vacancies }}</div>
+          </div>
+          <div *ngIf="selectedOfferForDetail()?.expiresAt">
+            <div class="text-xs text-slate-500">Fecha Límite</div>
+            <div class="font-semibold text-slate-800">{{ selectedOfferForDetail()?.expiresAt | date:'mediumDate' }}</div>
+          </div>
+          <div>
+            <div class="text-xs text-slate-500">Contacto Empresa</div>
+            <div class="font-semibold text-slate-800">{{ selectedOfferForDetail()?.company?.contactEmail }}</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex justify-end gap-3 pt-4 border-t border-slate-100">
+        <button type="button" (click)="closeDetail()" class="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-lg font-medium cursor-pointer">
+          Cerrar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal para Publicar Convocatoria -->
+  <div *ngIf="showCreateModal()" class="fixed inset-0 z-50 overflow-y-auto bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-xl max-w-2xl w-full p-6 sm:p-8 space-y-6">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-4">
+        <h3 class="text-lg font-bold text-slate-800">Publicar Convocatoria de Práctica</h3>
+        <button (click)="closeCreateModal()" class="text-slate-400 hover:text-slate-600 text-2xl leading-none">&times;</button>
+      </div>
+
+      <form [formGroup]="offerForm" (ngSubmit)="submitOffer()" class="space-y-4">
+        <!-- Selector de empresa si es Admin / Coordinador -->
+        <div *ngIf="isCoordinatorOrAdmin()">
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Empresa Aliada *</label>
+          <select formControlName="companyId" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+            <option value="">Seleccione la empresa verificada...</option>
+            <option *ngFor="let comp of companies()" [value]="comp.id">
+              {{ comp.legalName }} (NIT: {{ comp.nit }})
+            </option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Título de la Convocatoria *</label>
+          <input formControlName="title" type="text" placeholder="Ej: Practicante de Desarrollo Fullstack (Angular / Node.js)" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Perfil / Programa Solicitado *</label>
+            <input formControlName="profileNeeded" type="text" placeholder="Ej: Ingeniería de Sistemas" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Número de Vacantes *</label>
+            <input formControlName="vacancies" type="number" min="1" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Modalidad *</label>
+            <select formControlName="modality" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+              <option [value]="OfferModality.HYBRID">Híbrida</option>
+              <option [value]="OfferModality.REMOTE">Remota</option>
+              <option [value]="OfferModality.ON_SITE">Presencial</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Ubicación / Ciudad *</label>
+            <input formControlName="location" type="text" placeholder="Ej: Bogotá D.C." class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Auxilio Económico / Compensación</label>
+            <input formControlName="salaryCompensation" type="text" placeholder="Ej: $1.600.000 COP + ARL" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Fecha Límite de Postulación</label>
+            <input formControlName="expiresAt" type="date" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none" />
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Descripción de Funciones y Proyecto *</label>
+          <textarea formControlName="description" rows="3" placeholder="Detalla las actividades y alcance del practicante..." class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none"></textarea>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 mb-1">Requisitos Técnicos y de Formación *</label>
+          <textarea formControlName="requirements" rows="3" placeholder="Habilidades técnicas, lenguajes, competencias blandas..." class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none"></textarea>
+        </div>
+
+        <div class="flex justify-end gap-3 pt-4 border-t border-slate-100">
+          <button type="button" (click)="closeCreateModal()" class="px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 rounded-lg font-medium cursor-pointer">
+            Cancelar
+          </button>
+          <button type="submit" [disabled]="offerForm.invalid || isLoading()" class="px-5 py-2 text-sm bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-semibold rounded-lg shadow-sm cursor-pointer">
+            Publicar Convocatoria
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>

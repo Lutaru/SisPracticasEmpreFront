@@ -32,6 +32,13 @@ export const routes: Routes = [
           ),
       },
       {
+        path: 'offers',
+        loadComponent: () =>
+          import('./features/offers/offers-list.component').then(
+            (m) => m.OffersListComponent,
+          ),
+      },
+      {
         path: '',
         redirectTo: 'dashboard',
         pathMatch: 'full',
