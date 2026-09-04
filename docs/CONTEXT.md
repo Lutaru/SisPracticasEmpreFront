@@ -72,6 +72,43 @@ El **Sistema de Gestión de Prácticas Empresariales Universitarias** es una pla
    - `DELETE /api/v1/users/:id`: Desactivación lógica / eliminación.
 3. **`AuditModule` (`src/modules/audit`):**
    - `GET /api/v1/audit`: Listado histórico de acciones con usuario, entidad afectada, payload previo y nuevo, e IP.
+4. **`CompaniesModule` (`src/modules/companies`):**
+   - `POST /api/v1/companies`: Registro de empresa aliada (vinculación automática a usuario Company o asignada por Admin).
+   - `GET /api/v1/companies`: Catálogo de empresas con filtros (búsqueda, sector, ciudad, verificación) y paginación.
+   - `GET /api/v1/companies/me`: Perfil de empresa para el usuario Company autenticado.
+   - `GET /api/v1/companies/:id`: Detalle completo con convenios vinculados.
+   - `PATCH /api/v1/companies/:id`: Actualización de datos organizacionales.
+   - `PATCH /api/v1/companies/:id/verify`: Aprobación jurídica de empresa (Admin / Coordinador).
+   - `POST /api/v1/companies/:companyId/agreements`: Registro de convenios marco.
+   - `GET /api/v1/companies/:companyId/agreements`: Consulta de convenios por empresa.
+   - `PATCH /api/v1/agreements/:id/status`: Aprobación, activación o finalización de convenios marco.
+5. **`OffersModule` (`src/modules/offers`):**
+   - `POST /api/v1/offers`: Publicación de convocatorias para empresas verificadas (o por Coordinación/Admin).
+   - `GET /api/v1/offers`: Catálogo de convocatorias abiertas para estudiantes y docentes; gestión de ofertas propias para empresas. Filtros por modalidad (`REMOTE`, `HYBRID`, `ON_SITE`), ubicación, perfil y búsqueda.
+   - `GET /api/v1/offers/:id`: Detalle completo de una convocatoria y empresa ofertante.
+   - `PATCH /api/v1/offers/:id`: Actualización de términos y fechas de la oferta.
+   - `PATCH /api/v1/offers/:id/status`: Cambio de estado (`OPEN`, `CLOSED`, `CANCELLED`).
+6. **`ApplicationsModule` (`src/modules/applications`):**
+   - `POST /api/v1/applications`: Postulación de estudiante a una convocatoria abierta con hoja de vida y carta de motivación.
+   - `GET /api/v1/applications/my-applications`: Historial de aplicaciones para el estudiante en sesión.
+   - `GET /api/v1/applications`: Panel de postulaciones filtrable por oferta, estudiante y estado.
+   - `GET /api/v1/applications/:id`: Detalle completo de la postulación.
+   - `PATCH /api/v1/applications/:id/status`: Transición de estado (`SUBMITTED`, `PRESELECTED`, `INTERVIEW_SCHEDULED`, `ACCEPTED`, `REJECTED`), asignación de fecha de entrevista y feedback.
+7. **`InternshipsModule` (`src/modules/internships`):**
+   - `POST /api/v1/internships`: Formalización de práctica activa a partir de postulación aceptada.
+   - `GET /api/v1/internships`: Listado de prácticas en curso filtradas por rol (estudiante ve la suya, docente las asignadas, empresa las de sus ofertas, coordinación/admin todas).
+   - `GET /api/v1/internships/:id`: Detalle completo de la práctica con reportes y datos de seguimiento.
+   - `PATCH /api/v1/internships/:id/assign-tutor`: Asignación de tutor académico por Coordinador/Admin.
+   - `PATCH /api/v1/internships/:id/status`: Transición de ciclo de vida (`INITIATED`, `IN_PROGRESS`, `FINAL_EVALUATION`, `COMPLETED`, `CANCELLED`).
+   - `POST /api/v1/internships/:internshipId/reports`: Subida de informe de avance (`INITIAL_PLAN`, `PARTIAL_1`, `PARTIAL_2`, `FINAL`) por el estudiante practicante.
+   - `GET /api/v1/internships/:internshipId/reports`: Consulta de bitácora e informes entregados.
+   - `PATCH /api/v1/internships/reports/:id/review`: Calificación y observaciones (`APPROVED`, `OBSERVED`) por el tutor docente o coordinador.
+8. **`EvaluationsModule` (`src/modules/evaluations`):**
+   - `POST /api/v1/evaluations`: Registro o edición de evaluación con rúbrica ponderada (Supervisor Empresarial o Tutor Académico). Recalcula automáticamente la nota definitiva (50% Empresa + 50% Tutor) y actualiza el estado de la práctica a `COMPLETED` si la nota es aprobatoria (≥ 3.0).
+   - `GET /api/v1/evaluations`: Listado con filtros y control de visibilidad por rol.
+   - `GET /api/v1/evaluations/internship/:internshipId/summary`: Acta oficial consolidada con datos del estudiante, empresa, tutor, desglose de calificaciones y dictamen institucional (`APROBADO` / `REPROBADO`).
+   - `GET /api/v1/evaluations/internship/:internshipId`: Lista de evaluaciones registradas para una práctica.
+   - `GET /api/v1/evaluations/:id`: Consulta individual de evaluación con sus criterios y retroalimentación cualitativa.
 
 ---
 
@@ -93,14 +130,31 @@ src/app/
 │   │   └── auth.interceptor.ts # Intercepta peticiones HTTP y añade "Authorization: Bearer <token>"
 │   ├── models/
 │   │   ├── user.model.ts       # Interface User, Role enum, DocumentType enum
+│   │   ├── company.model.ts    # Interface Company, Agreement, AgreementStatus
+│   │   ├── offer.model.ts      # Interface InternshipOffer, OfferModality, OfferStatus
+│   │   ├── application.model.ts# Interface Application, ApplicationStatus
+│   │   ├── internship.model.ts # Interface Internship, InternshipReport, Enums
+│   │   ├── evaluation.model.ts # Interface Evaluation, EvaluationSummary, RubricCriteria
 │   │   └── auth-response.model.ts # Interface AuthResponse
 │   └── services/
-│       └── auth.service.ts     # Login, logout, refresh, Signal currentUser, Signal isAuthenticated
+│       ├── auth.service.ts     # Login, logout, refresh, Signal currentUser, Signal isAuthenticated
+│       ├── user.service.ts     # Gestión administrativa de usuarios y roles
+│       ├── company.service.ts  # CRUD de empresas, verificación y convenios
+│       ├── offer.service.ts    # Búsqueda, publicación y gestión de ofertas de práctica
+│       ├── application.service.ts # Postulaciones, seguimiento y gestión de candidatos
+│       ├── internship.service.ts  # Prácticas activas, bitácora de informes y revisión docente
+│       └── evaluation.service.ts  # Calificaciones, rúbricas y acta consolidada
 ├── layouts/
 │   └── main-layout/            # Barra lateral, cabecera superior, navegación y logout
 └── features/
     ├── auth/login/             # Formulario de inicio de sesión con feedback visual
-    └── dashboard/              # Tablero principal con cards por rol
+    ├── dashboard/              # Tablero principal con cards por rol
+    ├── users/                  # Directorio institucional de usuarios, filtros RBAC, edición y creación
+    ├── companies/              # Directorio de empresas, filtros, aprobación y registro de convenios
+    ├── offers/                 # Catálogo exploratorio de convocatorias, tarjetas, filtros y publicación
+    ├── applications/           # Gestión de candidatos y seguimiento de postulaciones
+    ├── internships/            # Bitácora de seguimiento, plan de trabajo, subida de informes y evaluación de tutor
+    └── evaluations/            # Rúbricas interactivas con cálculo en tiempo real y acta de finalización
 ```
 
 ---
@@ -110,53 +164,27 @@ src/app/
 ### Tablas Existentes:
 - **`users`**: `id` (uuid), `email` (unique), `passwordHash`, `firstName`, `lastName`, `documentType`, `documentNumber`, `phone`, `role`, `isActive`, `createdAt`, `updatedAt`.
 - **`audit_logs`**: `id` (uuid), `userId`, `action`, `entityName`, `entityId`, `details`, `ipAddress`, `createdAt`.
+- **`companies`**: `id` (uuid), `legalName`, `tradeName`, `nit` (unique), `contactEmail`, `phone`, `address`, `city`, `website`, `sector`, `description`, `isVerified` (boolean), `userId` (FK User), `createdAt`, `updatedAt`.
+- **`agreements`**: `id` (uuid), `companyId` (FK Company), `agreementNumber` (unique), `startDate`, `endDate`, `status` (`DRAFT`, `PENDING_APPROVAL`, `ACTIVE`, `EXPIRED`, `TERMINATED`), `documentUrl`, `approvedById` (FK User), `observations`, `createdAt`, `updatedAt`.
+- **`internship_offers`**: `id` (uuid), `companyId` (FK Company), `title`, `description`, `requirements`, `profileNeeded`, `vacancies`, `salaryCompensation`, `modality` (`ON_SITE`, `REMOTE`, `HYBRID`), `location`, `status` (`DRAFT`, `OPEN`, `CLOSED`, `CANCELLED`), `expiresAt`, `createdAt`, `updatedAt`.
+- **`applications`**: `id` (uuid), `offerId` (FK Offer), `studentId` (FK User), `status` (`SUBMITTED`, `PRESELECTED`, `INTERVIEW_SCHEDULED`, `ACCEPTED`, `REJECTED`), `coverLetter`, `resumeUrl`, `feedback`, `interviewDate`, `appliedAt`, `updatedAt`.
+- **`internships`**: `id` (uuid), `applicationId` (FK Application), `studentId` (FK User), `companyId` (FK Company), `tutorId` (FK User Tutor), `startDate`, `endDate`, `status` (`INITIATED`, `IN_PROGRESS`, `FINAL_EVALUATION`, `COMPLETED`, `CANCELLED`), `weeklyHours`, `companySupervisorName`, `companySupervisorEmail`, `finalGrade`, `createdAt`, `updatedAt`.
+- **`internship_reports`**: `id` (uuid), `internshipId` (FK Internship), `reportType` (`INITIAL_PLAN`, `PARTIAL_1`, `PARTIAL_2`, `FINAL`), `fileUrl`, `description`, `status` (`SUBMITTED`, `APPROVED`, `OBSERVED`), `tutorObservations`, `reviewedAt`, `submittedAt`, `createdAt`, `updatedAt`.
+- **`evaluations`**: `id` (uuid), `internshipId` (FK Internship), `evaluatorId` (FK User), `evaluatorType` (`COMPANY`, `TUTOR`), `score` (decimal 0.00 - 5.00), `criteriaScores` (jsonb con competencias técnicas, actitudinales, cumplimiento), `strengths`, `improvements`, `recommendations`, `createdAt`, `updatedAt`.
 
 ### Tablas a Desarrollar (Próximos Sprints):
-1. **`companies`:**
-   - `id`, `legalName` (Razón Social), `tradeName` (Nombre Comercial), `nit`, `contactEmail`, `phone`, `address`, `city`, `website`, `sector`, `isVerified` (boolean), `createdAt`.
-2. **`agreements` (Convenios):**
-   - `id`, `companyId`, `agreementNumber`, `startDate`, `endDate`, `status` (`DRAFT`, `PENDING_APPROVAL`, `ACTIVE`, `EXPIRED`, `TERMINATED`), `documentUrl`, `approvedById`.
-3. **`internship_offers` (Convocatorias / Ofertas):**
-   - `id`, `companyId`, `title`, `description`, `requirements`, `profileNeeded`, `vacancies`, `salaryCompensation`, `modality` (`ON_SITE`, `REMOTE`, `HYBRID`), `location`, `status` (`OPEN`, `CLOSED`, `CANCELLED`), `expiresAt`.
-4. **`applications` (Postulaciones):**
-   - `id`, `offerId`, `studentId`, `status` (`SUBMITTED`, `PRESELECTED`, `INTERVIEW_SCHEDULED`, `ACCEPTED`, `REJECTED`), `coverLetter`, `resumeUrl`, `feedback`, `appliedAt`.
-5. **`internships` (Prácticas en Curso):**
-   - `id`, `applicationId`, `studentId`, `companyId`, `tutorId`, `startDate`, `endDate`, `status` (`INITIATED`, `IN_PROGRESS`, `FINAL_EVALUATION`, `COMPLETED`, `CANCELLED`), `weeklyHours`.
-6. **`internship_reports` (Informes de Seguimiento):**
-   - `id`, `internshipId`, `reportType` (`INITIAL_PLAN`, `PARTIAL_1`, `PARTIAL_2`, `FINAL`), `fileUrl`, `submissionDate`, `status` (`SUBMITTED`, `APPROVED`, `OBSERVED`), `tutorObservations`.
-7. **`evaluations` (Evaluaciones):**
-   - `id`, `internshipId`, `evaluatorId`, `evaluatorType` (`COMPANY`, `TUTOR`), `score` (decimal), `rubricJson`, `recommendations`, `createdAt`.
+1. **`certificates` (Actas y Certificados de Finalización):**
+   - Generación de certificado digital de culminación de práctica profesional con código QR o hash verificable.
 
 ---
 
 ## 5. Próximos Pasos Recomendados para Continuar
 
-Para continuar el trabajo en otro equipo, se sugiere seguir este orden de prioridades:
+Para continuar el trabajo, se sugiere seguir este orden de prioridades:
 
-### Paso 1: Módulo de Empresas y Convenios en Backend
-1. Generar módulo:
-   ```bash
-   cd backend
-   nest g module modules/companies
-   nest g controller modules/companies
-   nest g service modules/companies
-   ```
-2. Crear entidad `Company` y sus relaciones con TypeORM.
-3. Crear endpoints para registro de empresa, aprobación por parte del coordinador y consulta de perfil.
-
-### Paso 2: Módulo de Ofertas de Práctica
-1. Crear módulo `offers` para publicación de vacantes por parte de empresas verificadas.
-2. Endpoint para listar ofertas activas para estudiantes con filtros (modalidad, ciudad, perfil).
-
-### Paso 3: Módulo de Postulaciones
-1. Crear módulo `applications`.
-2. Estudiante puede hacer `POST /applications` enviando oferta y URL/archivo de hoja de vida.
-3. Empresa y coordinador pueden cambiar el estado de la postulación.
-
-### Paso 4: Vistas en Frontend Angular
-1. Crear componentes de administración de usuarios en `frontend/src/app/features/users/`.
-2. Crear catálogo de ofertas para estudiantes en `frontend/src/app/features/offers/`.
-3. Crear panel de empresa para gestionar candidatos en `frontend/src/app/features/company/`.
+### Paso 1: Certificados y Exportación de Actas Digitales
+1. Módulo para emitir el certificado oficial de cumplimiento de práctica con código de verificación.
+2. Endpoint para descarga directa o visualización en PDF con sello institucional.
 
 ---
 
